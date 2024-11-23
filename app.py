@@ -18,16 +18,23 @@ def validate_expression():
     try:
         parser = CalculatorParser(expression)
         parser.parse()
-        tokens = parser.analyze_lexically()  # Generar tokens léxicos
-
         parser.render_tree("static/parse_tree")  # Guarda el árbol en static/parse_tree.png
+
+        # Agregar conteo de tokens
+        token_counts = {
+            'enteros': sum(1 for token in parser.lexical_tokens if token['type'] == 'entero'),
+            'decimales': sum(1 for token in parser.lexical_tokens if token['type'] == 'decimal'),
+            'operadores': sum(1 for token in parser.lexical_tokens if 'operador' in token['type']),
+            'paréntesis apertura': sum(1 for token in parser.lexical_tokens if token['type'] == 'paréntesis apertura'),
+            'paréntesis cierre': sum(1 for token in parser.lexical_tokens if token['type'] == 'paréntesis cierre'),
+        }
+
         return jsonify({
             'message': 'Expresión válida',
             'result': expression,
-            'tree_image': '/static/parse_tree.png',
-            'tokens': tokens  # Devuelve los tokens generados
-
-            
+            'tokens': parser.lexical_tokens,
+            'token_counts': token_counts,
+            'tree_image': '/static/parse_tree.png'
         })
     except ValueError as e:
         return jsonify({'error': str(e)}), 400

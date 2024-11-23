@@ -153,6 +153,35 @@
         td {
             background-color: #2f3e4f;
         }
+
+        .summary {
+            margin-top: 20px;
+            font-size: 1.2em;
+            background-color: #2f3e4f;
+            padding: 10px;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+        }
+        @media (max-width: 768px) {
+        .container {
+            flex-direction: column; /* Los elementos se apilan verticalmente */
+            align-items: center;
+        }
+
+        .calculator, .right-panel {
+            min-width: 100%; /* Los elementos ocuparán todo el ancho disponible */
+            max-width: 100%; /* Se adapta al ancho del contenedor */
+        }
+
+        .tree-container img {
+            max-height: 300px; /* Reduce el tamaño máximo de la imagen */
+        }
+
+        .toggle-buttons {
+            flex-direction: column; /* Acomoda los botones en una columna en pantallas pequeñas */
+        }
+        }
     </style>
 </head>
 <body>
@@ -210,6 +239,9 @@
                     </thead>
                     <tbody></tbody>
                 </table>
+                <div class="summary" id="tokenSummary">
+                    <!-- Resumen de tokens se muestra aquí -->
+                </div>
             </div>
         </div>
     </div>
@@ -237,6 +269,7 @@
             display.value = '';
             document.getElementById('treeImage').style.display = 'none';
             document.getElementById('tokensTable').style.display = 'none';
+            document.getElementById('tokenSummary').innerText = '';
         }
 
         function memoryUse() {
@@ -270,11 +303,13 @@
                     memoria = result.result; // Guarda el resultado en memoria
                     const calculatedResult = eval(result.result); // Evalúa la operación
                     display.value = calculatedResult; 
+
                     const treeImage = document.getElementById('treeImage');
                     const tokensTable = document.getElementById('tokensTable');
                     const tbody = tokensTable.querySelector('tbody');
-                    tbody.innerHTML = ''; // Limpiar tabla
+                    const summary = document.getElementById('tokenSummary');
 
+                    tbody.innerHTML = ''; // Limpiar tabla
                     result.tokens.forEach((token) => {
                         const row = document.createElement('tr');
                         const tokenCell = document.createElement('td');
@@ -287,6 +322,16 @@
                         row.appendChild(typeCell);
                         tbody.appendChild(row);
                     });
+
+                    // Mostrar el resumen de los conteos de tokens
+                    const counts = result.token_counts;
+                    summary.innerText = `
+                        ${counts.enteros} enteros, 
+                        ${counts.decimales} decimales, 
+                        ${counts.operadores} operadores, 
+                        ${counts['paréntesis apertura']} paréntesis apertura, 
+                        ${counts['paréntesis cierre']} paréntesis cierre.
+                    `;
 
                     tokensTable.style.display = 'table';
 

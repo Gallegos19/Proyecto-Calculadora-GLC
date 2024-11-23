@@ -9,6 +9,14 @@ class CalculatorParser:
         self.dot = Digraph()
         self.node_count = 0
         self.lexical_tokens = []  # Almacena los tokens analizados léxicamente
+        self.token_counts = {     # Almacena el conteo de cada tipo de token
+            "enteros": 0,
+            "decimales": 0,
+            "operadores": 0,
+            "paréntesis apertura": 0,
+            "paréntesis cierre": 0,
+            "desconocidos": 0
+        }
 
     def get_current_token(self):
         if self.current_token_index < len(self.tokens):
@@ -73,14 +81,8 @@ class CalculatorParser:
             return 'decimal'
         elif re.match(r'^\d+$', token):
             return 'entero'
-        elif token == '+':
-            return 'operador suma'
-        elif token == '-':
-            return 'operador resta'
-        elif token == '*':
-            return 'operador multiplicación'
-        elif token == '/':
-            return 'operador división'
+        elif token in ['+', '-', '*', '/']:
+            return 'operador'
         elif token == '(':
             return 'paréntesis apertura'
         elif token == ')':
@@ -90,13 +92,43 @@ class CalculatorParser:
 
     def analyze_lexically(self):
         """
-        Realiza el análisis léxico de los tokens y retorna una lista con información detallada.
+        Realiza el análisis léxico de los tokens y actualiza el conteo de cada tipo.
         """
         self.lexical_tokens = []  # Limpia los tokens léxicos
+        self.token_counts = {  # Reinicia los conteos
+            "enteros": 0,
+            "decimales": 0,
+            "operadores": 0,
+            "paréntesis apertura": 0,
+            "paréntesis cierre": 0,
+            "desconocidos": 0
+        }
+
         for token in self.tokens:
             token_type = self.classify_token(token)
             self.lexical_tokens.append({'token': token, 'type': token_type})
+
+            # Actualiza el conteo según el tipo del token
+            if token_type == 'entero':
+                self.token_counts["enteros"] += 1
+            elif token_type == 'decimal':
+                self.token_counts["decimales"] += 1
+            elif token_type == 'operador':
+                self.token_counts["operadores"] += 1
+            elif token_type == 'paréntesis apertura':
+                self.token_counts["paréntesis apertura"] += 1
+            elif token_type == 'paréntesis cierre':
+                self.token_counts["paréntesis cierre"] += 1
+            else:
+                self.token_counts["desconocidos"] += 1
+
         return self.lexical_tokens
+
+    def get_token_counts(self):
+        """
+        Retorna el conteo de cada tipo de token.
+        """
+        return self.token_counts
 
     def parse_S(self):
         node = self.create_node('S')
