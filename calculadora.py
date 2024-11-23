@@ -3,14 +3,21 @@ from graphviz import Digraph
 
 class CalculatorParser:
     def __init__(self, expression):
-        self.tokens = re.findall(r'\d+|\+|\-|\*|\/|\(|\)|\.', expression)
+        # Tokenizar la expresión (incluye decimales como un solo token)
+        self.tokens = re.findall(r'\d+\.\d+|\d+|\+|\-|\*|\/|\(|\)', expression)
         self.current_token_index = 0
         self.dot = Digraph()
         self.node_count = 0
+        self.lexical_tokens = []  # Almacena los tokens analizados léxicamente
 
     def get_current_token(self):
         if self.current_token_index < len(self.tokens):
             return self.tokens[self.current_token_index]
+        return None
+
+    def get_next_token(self):
+        if self.current_token_index + 1 < len(self.tokens):
+            return self.tokens[self.current_token_index + 1]
         return None
 
     def consume_token(self):
@@ -24,6 +31,72 @@ class CalculatorParser:
 
     def add_edge(self, parent, child):
         self.dot.edge(parent, child)
+
+    def validate_parentheses(self):
+        """
+        Valida si los paréntesis están correctamente balanceados.
+        """
+        stack = []
+        for token in self.tokens:
+            if token == '(':
+                stack.append(token)
+            elif token == ')':
+                if not stack:
+                    raise ValueError("Error: Paréntesis de cierre sin apertura")
+                stack.pop()
+        if stack:
+            raise ValueError("Error: Paréntesis abiertos sin cerrar")
+
+    def handle_implicit_multiplication(self):
+        """
+        Detecta multiplicaciones implícitas (ej. 2(3) o 4.5(6)) y ajusta los tokens.
+        """
+        new_tokens = []
+        for i in range(len(self.tokens)):
+            current_token = self.tokens[i]
+            new_tokens.append(current_token)
+
+            if i < len(self.tokens) - 1:
+                next_token = self.tokens[i + 1]
+
+                # Detectar patrones de multiplicación implícita
+                if (re.match(r'\d+(\.\d+)?', current_token) or current_token == ')') and \
+                   (re.match(r'\d+(\.\d+)?', next_token) or next_token == '('):
+                    new_tokens.append('*')  # Insertar operador de multiplicación implícita
+        self.tokens = new_tokens
+
+    def classify_token(self, token):
+        """
+        Clasifica un token en base a su tipo: número entero, número decimal, operador, etc.
+        """
+        if re.match(r'^\d+\.\d+$', token):
+            return 'decimal'
+        elif re.match(r'^\d+$', token):
+            return 'entero'
+        elif token == '+':
+            return 'operador suma'
+        elif token == '-':
+            return 'operador resta'
+        elif token == '*':
+            return 'operador multiplicación'
+        elif token == '/':
+            return 'operador división'
+        elif token == '(':
+            return 'paréntesis apertura'
+        elif token == ')':
+            return 'paréntesis cierre'
+        else:
+            return 'desconocido'
+
+    def analyze_lexically(self):
+        """
+        Realiza el análisis léxico de los tokens y retorna una lista con información detallada.
+        """
+        self.lexical_tokens = []  # Limpia los tokens léxicos
+        for token in self.tokens:
+            token_type = self.classify_token(token)
+            self.lexical_tokens.append({'token': token, 'type': token_type})
+        return self.lexical_tokens
 
     def parse_S(self):
         node = self.create_node('S')
@@ -68,27 +141,15 @@ class CalculatorParser:
                 self.consume_token()
                 return node
             else:
-                raise ValueError("Error: Paréntesis desbalanceados")
+                raise ValueError("Error: Paréntesis abiertos sin cerrar al final")
         child = self.parse_D()
         self.add_edge(node, child)
         return node
 
     def parse_D(self):
         node = self.create_node('D')
-        child = self.parse_E()
-        self.add_edge(node, child)
-        while self.get_current_token() == '.':
-            dot_node = self.create_node('.')
-            self.add_edge(node, dot_node)
-            self.consume_token()
-            next_child = self.parse_E()
-            self.add_edge(node, next_child)
-        return node
-
-    def parse_E(self):
-        node = self.create_node('E')
         token = self.get_current_token()
-        if token and re.match(r'\d+', token):
+        if token and re.match(r'\d+(\.\d+)?', token):  # Reconocer números enteros y decimales
             self.consume_token()
             token_node = self.create_node(token)
             self.add_edge(node, token_node)
@@ -96,6 +157,16 @@ class CalculatorParser:
         raise ValueError(f"Error: Se esperaba un número, pero se encontró '{token}'")
 
     def parse(self):
+        # Validar paréntesis antes de analizar
+        self.validate_parentheses()
+
+        # Manejar multiplicaciones implícitas
+        self.handle_implicit_multiplication()
+
+        # Realizar análisis léxico
+        self.analyze_lexically()
+
+        # Iniciar el análisis sintáctico
         root = self.parse_S()
         if self.get_current_token() is not None:
             raise ValueError("Error: Entrada no válida después del final de la expresión")
