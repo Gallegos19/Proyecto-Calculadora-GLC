@@ -132,8 +132,16 @@ class CalculatorParser:
 
     def parse_S(self):
         node = self.create_node('S')
-        child = self.parse_A()
-        self.add_edge(node, child)
+        # Manejar un signo negativo inicial
+        if self.get_current_token() == '-':
+            minus_node = self.create_node('-')
+            self.add_edge(node, minus_node)
+            self.consume_token()
+            child = self.parse_A()
+            self.add_edge(node, child)
+        else:
+            child = self.parse_A()
+            self.add_edge(node, child)
         return node
 
     def parse_A(self):
@@ -203,6 +211,6 @@ class CalculatorParser:
         if self.get_current_token() is not None:
             raise ValueError("Error: Entrada no válida después del final de la expresión")
         return root
-
+ 
     def render_tree(self, output_filename="static/parse_tree"):
         self.dot.render(output_filename, format="png", cleanup=True)
